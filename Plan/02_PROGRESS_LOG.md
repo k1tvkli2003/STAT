@@ -33,14 +33,23 @@ used, assumptions, known limits, next dependency. Legend: ✅ done · 🟦 in pr
 - **Known limit:** no engine in this container → no compile/package log produced here.
 - **Next dependency:** Stage 02 consumes the module map + Primary Asset Types + Gameplay Tag root.
 
-### Stage 02 — Core Lifecycle & Data Architecture — ⏳ queued
-- Plan: subsystem ownership map, game-flow states, typed event/message contracts, `UPrimaryDataAsset`
-  bases + validation framework + stable IDs + schema versions, deterministic RNG streams, automation
-  harness. Primary `/function`; support `/dataman` (data contracts), `/anatomy` (flow).
+### Stage 02 — Core Lifecycle & Data Architecture — 🟦 design-complete
+- **Skill used:** `/function` (lifecycle wiring, single source of truth, resilience) + `/dataman`
+  (data-asset validation framework) + `/anatomy` (front-end→world flow).
+- **Delivered now:** `Docs/Stage02_LifecycleAndData.md` — subsystem ownership map (one owner per
+  fact), game-flow state machine + transitions, typed message bus contracts, world clock + named
+  deterministic RNG streams, `USTATPrimaryDataAsset` base + validation framework (actionable
+  messages) + registry, debug commands, automation harness spec, tested teardown contract for
+  zero state leak.
+- **Needs UE5 box to close:** implement §2/§3/§6 as full `.h/.cpp`, author fixtures, run §8 specs.
+- **Acceptance:** menu↔world no-leak + invalid-data-fails-loudly → design-complete & testable;
+  **run evidence pending toolchain.**
+- **Next dependency:** Stage 03 consumes input/profile subsystems, message bus, clock, flow states.
 
-### Stage 03 — Input, Camera, Character, Interaction — ⏳ queued
-- Plan: Enhanced Input (KB/M + gamepad), remap, context switching, third-person camera+collision,
-  locomotion, interaction scanner, accessibility assists. Primary `/anatomy`; support `/function`, `/style`.
+### Stage 03 — Input, Camera, Character, Interaction — 🟦 design-complete
+- **Skill used:** `/anatomy` (invoked) — interaction/input structure & reachability; support
+  `/function`, `/style`.
+- **Delivered:** `Docs/Stage03_InputCameraCharacter.md`.
 
 ---
 
