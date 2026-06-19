@@ -53,8 +53,23 @@ used, assumptions, known limits, next dependency. Legend: ✅ done · 🟦 in pr
 
 ---
 
-## Phase B — Vertical Slice (Stages 04–09) → M2  ⏳ queued
-04 Combat · 05 Vehicle · 06 District/streaming · 07 Traffic/crowds · 08 Police heat/pursuit · 09 Mission.
+## Phase B — Vertical Slice (Stages 04–09) → M2  🟦 in progress
+
+### Stage 04 — Combat Vertical Slice — 🟦 design-complete
+- **Skill used:** `/function` (invoked) — wiring integrity, single source of truth, integration
+  contracts, state completeness, game-thread discipline, resilience; support `/anatomy`, `/style`.
+- **Delivered:** `Docs/Stage04_Combat.md` — GAS attribute authority (one ASC AttributeSet for
+  health/armor/ammo; event-driven HUD, no polling), every combat input wired to a real ability,
+  the kill→`EncounterDirector` resolution contract + cross-feature hook interfaces, encounter state
+  machine with the Lull(Empty) and Recover(no soft-lock) arms, resilience guards (reload re-entrancy,
+  dry-fire, valid spawns, seeded damage RNG, save-mid-encounter), game-thread/tick budgets, and the
+  cover/AI/EQS/director/arena assembly.
+- **Needs UE5 box to close:** implement GAS abilities/attribute set, AI StateTree+EQS, the arena map;
+  run the 8 automation tests + an Insights capture vs the AI/frame budgets.
+- **Keystone:** kill→director resolution contract (encounter must actually reach "Won").
+- **Next dependency:** Stage 05 reuses the GAS pattern, threat/pursuit hooks, input contexts, save/RNG.
+
+05 Vehicle · 06 District/streaming · 07 Traffic/crowds · 08 Police heat/pursuit · 09 Mission — ⏳ queued.
 Gate M2 = packaged Windows build proving the full slice loop, measured.
 
 ## Phase C — Production Systems (Stages 10–16) → M3  ⏳ queued
