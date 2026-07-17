@@ -1,343 +1,331 @@
 # STAT Build Sequence
 
-Each section below is an independent implementation prompt governed by `01_MASTER_PROMPT.md`. Apply `03_QUALITY_GATES.md` before accepting a stage.
+Each section is an independent implementation prompt governed by `01_MASTER_PROMPT.md`. **Invoke the
+stage's governing skill(s) first** for a ranked design/audit, then implement. Apply `03_QUALITY_GATES.md`
+before accepting a stage. Everything ships from one UE5/C++ codebase to all six platforms with explicit
+scalability tiers.
 
-## 01 - Project, Modules, Toolchain, And Budgets
+---
 
-Create the UE5 C++ project, runtime/editor/test modules, plugin boundaries, coding rules, target configs, source-control/LFS guidance, Asset Manager rules, Gameplay Tags, CI/build scripts, crash symbols, and explicit CPU, GPU, frame-time, memory, streaming, package-size, load-time, and minimum-spec budgets.
+## 01 - Project, Modules, Multi-Platform Toolchain, Scalability Tiers, Budgets
+**Governing:** `/function` (system spine, budgets, measure-before-optimize).
 
-Deliverables:
+Create the UE5 C++ project; runtime/editor/test modules; plugin boundaries (hospital sim, agents, VEX
+clinical, treatment, triage/crisis, economy, roles, narrative, UI, audio, save, telemetry, content,
+tools, online); coding rules; **per-platform targets (Win/macOS/Linux/PlayStation/Android/iOS)**;
+device-profile **Scalability tiers** (mobile → high-end); Asset Manager rules; Gameplay Tags; CI/build
+scripts; crash symbols; and explicit **per-tier** CPU/GPU/frame-time/memory/streaming/package-size/
+load-time budgets with a documented minimum spec per platform.
 
-1. Compiling Editor target and empty startup map.
-2. Module/plugin structure for core, UI, campaign, world, combat, vehicles, AI, missions, save, audio, tools, tests, and VEX.
-3. Asset naming rules, folder conventions, Primary Asset Types, Gameplay Tag hierarchy, and validation commands.
-4. Build scripts for clean compile, tests, and packaged smoke build.
-5. Architecture and performance-budget documentation.
+Deliverables: compiling Editor + one desktop + one mobile target and an empty startup map; module/plugin
+structure; naming/folder conventions, Primary Asset Types, Gameplay Tag hierarchy, validation commands;
+build scripts (clean compile, tests, packaged smoke on desktop + mobile); scalability-tier definitions;
+architecture + per-tier performance-budget docs.
 
-Acceptance criteria:
+Acceptance: a new dev builds desktop **and** mobile targets from documented steps; CI needs no private
+credentials; PlayStation build path is architected and documented (built later on licensed SDK/hardware).
 
-- A new developer can build the Editor target from documented steps.
-- CI/build scripts do not require private credentials.
+---
 
-## 02 - Core Lifecycle And Data Architecture
+## 02 - Core Lifecycle & Data Architecture
+**Governing:** `/function` (lifecycle wiring, single source of truth, no leak) + `/dataman` (validated data).
 
-Define game flow, subsystem ownership, event contracts, clocks, deterministic random streams, save IDs, Primary Data Assets, validators, debug commands, and automation-test harnesses. Deliver an empty but robust front-end-to-world loop.
+Define game flow, subsystem ownership, typed event/message contracts, sim clock, deterministic RNG
+streams, save IDs, Primary Data Asset bases + validation framework (stable IDs, schema versions,
+actionable messages), debug commands, and the automation-test harness. Deliver an empty but robust
+front-end → hospital → front-end loop.
 
-Deliverables:
+Deliverables: GameInstance/World/LocalPlayer subsystem ownership map (one owner per fact); menu → hospital
+→ menu flow with a tested teardown contract (zero state leak); message bus; `UPrimaryDataAsset` bases +
+validators + registry; seeded RNG; automation tests (lifecycle, invalid data, RNG determinism).
 
-1. GameInstance, World, LocalPlayer, and Player subsystem ownership map.
-2. Front end, loading, new game, continue, world entry, pause, and quit flow.
-3. Typed event bus or message contracts where needed.
-4. Primary Data Asset base classes, validation framework, stable IDs, schema versions, and debug commands.
-5. Automation tests for lifecycle flow, invalid data, deterministic RNG, and asset validation.
+Acceptance: menu ↔ hospital with **no leaked state**; invalid data assets fail validation with
+**actionable** messages.
 
-Acceptance criteria:
+---
 
-- The game can transition from menu to world and back without leaking state.
-- Invalid data assets fail validation with actionable messages.
+## 03 - Player Presence: Input, Camera, Character, 3D Interaction
+**Governing:** `/anatomy` (interaction structure, reachability, no dead ends) + `/function` (wiring, no bleed).
 
-## 03 - Input, Camera, Character, And Interaction
+Enhanced Input for **KBM + gamepad + touch**, remapping, context switching (Explore / Examine / Menu /
+Cinematic), third-person (and/or first-person) camera with collision, locomotion, a **single-winner
+interaction scanner** (prioritized prompts, hysteresis to prevent flicker), accessibility assists, and
+deterministic interaction tests.
 
-Implement Enhanced Input for keyboard/mouse and gamepad, remapping, context switching, third-person camera collision, locomotion, traversal foundation, interaction scanning, prompts, accessibility assists, and deterministic interaction tests.
+Deliverables: input actions/contexts/glyphs/remap/sensitivity; **touch controls** for mobile; camera
+orbit/collision; interaction scanner with priority + anti-flicker; controller/touch **default focus**
+never empty; accessibility assists (hold↔toggle, assist toggles, buffering); tests (mapping, context
+switch, interaction priority, device-swap prompts).
 
-Deliverables:
+Acceptance: fully controllable on **desktop and mobile**; prompts/glyphs swap with the active device;
+no input bleed across context swaps.
 
-1. Input actions, mapping contexts, glyph support, remapping, hold/toggle options, sensitivity, and inversion.
-2. Character locomotion, camera orbit/collision, sprint, crouch, cover-ready movement, and traversal hooks.
-3. Interaction scanner with prioritization, prompts, focus rules, and debug visualization.
-4. Accessibility assists for aim, camera shake, hold actions, subtitles hooks, and input buffering.
-5. Tests for mapping changes, context switching, interaction priority, and pause/menu transitions.
+---
 
-Acceptance criteria:
+## 04 - The Hospital Space: Fully-3D Hospital, Streaming, Navigation
+**Governing:** `/function` (streaming hitch = jank, per-tier budget) + `/anatomy` (legible layout, wayfinding).
 
-- Keyboard/mouse and gamepad are both fully controllable.
-- Prompt text and glyphs update with input device changes.
+One production-quality **fully-3D hospital wing** via World Partition + Data Layers (floors/wings/
+departments), HLOD, navigation, occlusion, streaming sources, lighting scenarios, and automated
+streaming walks — tuned so it streams without hitches on **each target tier including mobile**.
 
-## 04 - Combat Vertical Slice
+Deliverables: the wing map (ER, one department, corridors, rooms, landmarks) with legible wayfinding;
+WP/Data Layer/HLOD/nav/occlusion/source setup; **per-tier** streaming budget + velocity/route prefetch;
+automated walk tests + Insights captures on desktop and mobile; content-density budget before expansion.
 
-Build weapon data, aiming, recoil, spread, reload, damage, armor, hit reactions, cover, takedowns, threat indicators, AI perception, combat states, encounter director, and a representative combat arena.
+Acceptance: streams without major hitches on target hardware **per tier**; layout is legible and density
+intentional before the hospital scales.
 
-Deliverables:
+---
 
-1. C++ weapon, damage, health, armor, ammo, recoil, spread, reload, and hit-reaction systems.
-2. Cover interaction, target acquisition, threat indicators, suppression hooks, and readable enemy telegraphs.
-3. AI perception, combat StateTree/Behavior Tree, EQS where useful, and encounter director.
-4. Combat arena map with debug spawns and designer-tunable Data Assets.
-5. Automation tests and profiling for traces, projectiles, animation events, VFX, and AI tick cost.
+## 05 - Patient & Staff Simulation
+**Governing:** `/function` (population within per-tier CPU budget, single owner) + `/dataman` (agent data).
 
-Acceptance criteria:
+Scalable NPC agents — patients, staff, visitors — with conditions, routines, reactions, significance/LOD,
+pooling, stuck recovery, and cleanup on streaming unload. Use Mass **only where profiling proves value**.
 
-- The arena supports a complete encounter loop: enter, engage, recover, win/fail.
-- Combat remains readable at low settings.
+Deliverables: a single population authority with per-tier caps; patient/staff/visitor archetypes +
+behavior state machines (with panic/evacuate/report arms wired to crisis + triage systems); significance/
+pooling/cleanup (no leaked actors); debug heatmaps; validated data catalogs; per-tier density captures.
 
-## 05 - Vehicle Vertical Slice
+Acceptance: population reacts believably within the **per-tier** CPU budget; patient condition changes
+feed the clinical + triage systems.
 
-Implement Chaos vehicle data, entry/exit, camera, assists, damage, repair, surface response, traffic collision, garage spawn, persistence, and one tuned hero vehicle.
+---
 
-Deliverables:
+## 06 - The VEX Clinical Engine (Core Loop)
+**Governing:** `/dataman` (case corpus + validation) + `/gamify` (scoring/mastery) + `/function` (determinism).
 
-1. Vehicle pawn/component architecture with data-driven tuning.
-2. Enter/exit flow, seat rules, vehicle camera, input assists, handbrake, reverse, horn/siren hooks, and damage.
-3. Surface response, collision handling, repair, respawn, garage spawn, and save persistence.
-4. One hero vehicle tuned for keyboard/mouse and gamepad at multiple frame rates.
-5. Tests and profiling for physics stability, input latency, camera collision, and save restore.
+The heart of the game: a **budget-and-clock-limited clinical loop** — intake → examine in 3D → purchase
+labs/imaging/consults from a finite budget with realistic delays → commit to a diagnosis → debrief/score.
+Deterministic and auditable.
 
-Acceptance criteria:
+Deliverables: versioned `VexCase` Primary Data Assets (presentation, findings, budgeted investigations,
+delayed results, correct diagnosis set, safety penalties, reviewer metadata, references, correction
+history); the examination + test-shop + results-timeline + diagnosis-commit runtime; a deterministic
+**event ledger** of purchases/results/decisions/timing; a scoring model rewarding accuracy, appropriate
+investigation, budget retained, and avoided harm (never guessing/waste); one full case end-to-end; tests
+for scoring, invalid cases, determinism, and disclaimer visibility.
 
-- Driving feels heavy but controllable.
-- Vehicle state survives save/load and world transitions.
+Acceptance: one case runs intake→diagnosis→debrief; the same seed reproduces the same score; content is
+validated and clearly **educational only**; unsafe/wasteful actions are penalized, not rewarded.
 
-## 06 - Dense District And Streaming
+---
 
-Create one production-quality district using World Partition, Data Layers, HLOD, level instances, navigation, occlusion, streaming sources, traversal metrics, lighting scenarios, and automated streaming walks.
+## 07 - Treatment & Procedures
+**Governing:** `/function` (state correctness, no soft-lock) + `/dataman` (procedure/outcome data).
 
-Deliverables:
+Data-driven treatments and 3D procedures that change patient state and produce outcomes — with every
+state arm modeled (stable → deteriorating → treated → complication → recovered/failed) and no dead ends.
 
-1. Slice district map with roads, alleys, interiors or entry points, safehouse location, combat space, pursuit routes, and landmarks.
-2. World Partition/Data Layer setup, HLOD strategy, navigation, occlusion, streaming sources, and lighting profile.
-3. Traversal metrics for foot, vehicle, chase, and mission routes.
-4. Automated streaming walk/drive tests and Insights captures.
-5. Content-density budget before expansion.
+Deliverables: treatment/procedure Data Assets; patient-state model + deterministic outcome resolution;
+complication + recovery arms (no soft-lock); integration contracts (treatment → patient state → VEX
+score → economy/reputation → narrative); tests for outcomes, edge cases, and save-mid-procedure.
 
-Acceptance criteria:
+Acceptance: treatment deterministically changes patient state and outcome; a failed/complicated case
+always has a defined, non-soft-locking continuation.
 
-- The district streams without major hitches on target hardware.
-- Content density feels intentional before map scale expands.
+---
 
-## 07 - Traffic, Crowds, And Civilian Reactions
+## 08 - Triage & Pressure Director
+**Governing:** `/function` (the collision loop) + `/ideas` (signature pressure moments).
 
-Build scalable traffic lanes, intersections, parking, spawn budgets, pedestrian zones, reactions, panic, reporting, evacuation, pooling, LOD/significance, stuck recovery, and debug heatmaps. Use Mass only where profiling demonstrates value.
+The systemic pressure engine: an emergent flow of cases/patients that **collide** and force triage and
+prioritization — the game's "missions collide" tension, medicalized.
 
-Deliverables:
+Deliverables: a triage/pressure director that paces intake, deterioration, and resource contention;
+prioritization surfacing (who first, what now); pressure tiers by difficulty; signature emergent moments
+(`/ideas`); tests for overload, starvation, fairness, and recovery.
 
-1. Traffic lane/intersection data, vehicle spawners, parking, despawn, and stuck recovery.
-2. Pedestrian zones, civilian state machine, panic, witness, reporting, evacuation, and avoidance.
-3. Significance, LOD, pooling, budget controls, and debug heatmaps.
-4. Tests for spawn limits, blocked routes, reporting events, and cleanup.
-5. Performance captures for traffic/crowd density tiers.
+Acceptance: cases collide and force real triage decisions without soft-locks; pressure is tunable and
+readable.
 
-Acceptance criteria:
+---
 
-- Traffic and civilians react believably without overwhelming CPU budget.
-- Reporting can feed the police heat system.
+## 09 - Crisis Events
+**Governing:** `/function` (escalate/resolve/recover) + `/ideas` (strong, distinct crises).
 
-## 08 - Police Heat And Pursuit Director
+Set-piece emergent crises — mass-casualty intake, outbreak, power failure, code blue — that escalate,
+resolve, and are always recoverable, reusing simulation/clinical/economy systems (no bespoke hacks).
 
-Implement witnessed crimes, evidence, district heat, dispatch, search areas, line-of-sight memory, escalation tiers, roadblocks, helicopter hooks for later, cooldown, disguises/vehicle recognition, arrest/failure, and anti-spawn-cheating rules.
+Deliverables: a crisis framework + at least one full crisis; escalation → response → resolution →
+aftermath state; integration with population, resources, reputation, and save; debug triggers; tests for
+escalation, resolution, recovery, and save/load mid-crisis.
 
-Deliverables:
+Acceptance: one crisis escalates, is handled, resolves, and recovers with no soft-lock; it uses systems,
+not one-off scripting.
 
-1. Heat model, crime events, witness/evidence pipeline, dispatch rules, and pursuit director.
-2. Search area, last-known position, line-of-sight memory, escalation, roadblocks, cooldown, and escape rules.
-3. Police AI behavior, vehicle pursuit hooks, arrest/failure flow, and player feedback.
-4. Debug tools for heat, dispatch, search radius, spawn sources, and recognition state.
-5. Tests for escalation, cooldown, escape, save/load, and invalid spawn conditions.
+---
 
-Acceptance criteria:
+## 10 - Resources, Reputation, Economy, Consequences
+**Governing:** `/dataman` (ledgers) + `/function` (auditable) + `/gamify` (meaningful, non-abusable).
 
-- A complete chase can start, escalate, search, and resolve.
-- Police do not spawn unfairly in visible impossible locations.
+Model beds/supplies/staff-time/budget, hospital reputation, and persistent consequences of outcomes —
+auditable, deterministic where scored, and free of irreversible soft-locks.
 
-## 09 - Mission Framework And Systemic Objectives
+Deliverables: resource + reputation models with stable save IDs; an auditable economy ledger
+(sources/sinks); consequence events affecting resources, case availability, department access, and
+patient trust; soft-lock prevention + recovery; tests for transactions, migration, thresholds, gating.
 
-Create data-driven mission definitions, objective graph, triggers, checkpoints, fail/recovery policy, world-state conditions, dialogue hooks, rewards, replay, validation, and debug skipping. Ship one full mission that supports stealth, combat, and vehicle escape without bespoke engine hacks.
+Acceptance: consequences are meaningful without permanently trapping the player; economy is auditable and
+deterministic where scored.
 
-Deliverables:
+---
 
-1. Mission Data Asset schema with objectives, conditions, rewards, checkpoints, dialogue hooks, and validation.
-2. Objective graph runtime with trigger handling, fail/recover policy, debug skip, and replay support.
-3. Checkpoint save integration and mission-state restoration.
-4. One complete mission chain using existing combat, vehicle, district, traffic, and police systems.
-5. Tests for objective ordering, invalid data, checkpoint restore, failure recovery, and replay.
+## 11 - Roles, Departments, Progression, Unlocks
+**Governing:** `/gamify` (progression that broadens play) + `/anatomy` (role/department flow).
 
-Acceptance criteria:
+Playable roles (attending / resident / paramedic), unlockable departments, and progression that
+**broadens** play rather than inflating numbers or gating essentials.
 
-- One mission can be completed through multiple supported approaches.
-- Mission logic uses systems, not one-off hacks.
+Deliverables: role definitions changing verbs/access; department unlock structure (information scent,
+reachable); progression tied to mastery, not grind; assignment/selection flow; tests for role effects,
+unlock gating (no essential lockout), and save/load.
 
-## 10 - Factions, District State, Economy, And Consequences
+Acceptance: roles meaningfully change play; unlocks broaden without hiding essential functionality behind
+game gates.
 
-Model reputation, territory pressure, prices, access, retaliation, informants, safehouses, mission availability, and persistent consequences. Keep economy sources/sinks auditable and prevent irreversible soft locks.
+---
 
-Deliverables:
+## 12 - Narrative, Dialogue, Patient Stories, Cinematics
+**Governing:** `/dataman` (dialogue/subtitle data) + `/style` (cinematic language) + `/anatomy` (flow).
 
-1. Faction and district-state models with stable save IDs.
-2. Economy ledger for money, favors, access, repairs, gear, safehouse upgrades, and mission rewards.
-3. Consequence events that affect heat, prices, mission availability, crew, and district behavior.
-4. Soft-lock prevention rules and recovery options.
-5. Tests for economy transactions, save migration, reputation thresholds, and mission gating.
+Narrative state, dialogue conditions, patient stories with continuity, ethics beats, subtitles, Sequencer
+conventions, skip/replay, camera safety, and cinematic streaming — localization-ready.
 
-Acceptance criteria:
+Deliverables: narrative-state + dialogue-condition system; subtitle/localization data contracts; patient
+story continuity; Sequencer conventions + skip/replay + streaming policy; intro/outro for the slice; tests
+for missing subtitles, invalid IDs, save-during-cinematic, skipped sequences.
 
-- Consequences are meaningful without permanently trapping the player.
-- Economy changes are auditable and deterministic where scored.
+Acceptance: cinematics never break save/input/streaming; all spoken/important content has subtitles;
+patient stories persist coherently.
 
-## 11 - Crew And Safehouse
+---
 
-Implement recruitable crew roles, loyalty, injuries, availability, perks, banter hooks, assignment, relationship events, garage/loadout services, and safehouse upgrades.
+## 13 - Atmosphere: Time, Ambience, Audio, VFX, Lighting
+**Governing:** `/style` (mood, readability, motion) + `/function` (per-tier budgets).
 
-Deliverables:
+Time-of-day, ambient hospital life, MetaSounds ambience/music states, a diegetic audio mix, Niagara
+budgets, and lighting scenarios — atmosphere that **improves readability** and holds on the mobile tier.
 
-1. Crew member Data Assets, runtime state, loyalty, injury, availability, perks, and role rules.
-2. Safehouse services for garage, loadout, planning, recovery, upgrades, and crew interactions.
-3. Assignment system for missions and support roles.
-4. Banter/event hooks with localization-ready text.
-5. Tests for availability, injury recovery, save/load, assignment conflicts, and perk effects.
+Deliverables: time/ambience state; audio state system (ambience, tension, procedure, crisis, UI,
+accessibility mix); VFX/lighting budgets + per-tier scalability; motion-with-meaning for key state
+changes; profiling + debug toggles.
 
-Acceptance criteria:
+Acceptance: atmosphere aids readability rather than obscuring it; the low/mobile tier preserves essential
+feedback.
 
-- Crew affects play without becoming spreadsheet micromanagement.
-- Crew state restores accurately from saves.
+---
 
-## 12 - Narrative, Dialogue, And Cinematic Pipeline
+## 14 - UI / HUD / Charts / Menus / Map / Accessibility
+**Governing:** `/anatomy` (structure, reachability) + `/style` (visual system, a11y).
 
-Define narrative state, dialogue conditions, localization-ready text, subtitles, performance capture hooks, Sequencer conventions, skip/replay, camera safety, save interaction, and cinematic streaming. Ship a complete mission intro/outro pipeline.
+CommonUI front end, HUD, the patient **chart** (the core information surface), test-shop, results
+timeline, department map, menus, and settings — controllable on **touch + gamepad + KBM**, WCAG-clean,
+light/dark, localization/RTL-ready.
 
-Deliverables:
+Deliverables: CommonUI shell (menu, pause, settings, save/load, profile); the patient chart + clinical
+HUD (vitals, budget, clock, findings, objectives); map + department navigation; accessibility (subtitles,
+colorblind-safe, contrast, text size, hold/toggle, reduced motion, remap, aim/read assists); tests across
+touch/gamepad/KBM, aspect ratios, scaling, pause, settings persistence.
 
-1. Narrative state model and dialogue condition system.
-2. Subtitle and localization data contracts.
-3. Sequencer conventions, camera safety rules, skip/replay behavior, and streaming policy.
-4. Mission intro/outro implementation for the vertical slice.
-5. Tests/checks for missing subtitles, invalid dialogue IDs, save during cinematic, and skipped sequences.
+Acceptance: UI is readable and controllable on **every** platform and input surface; accessibility
+options persist and take effect; no `/anatomy` or `/style` anti-pattern present.
 
-Acceptance criteria:
+---
 
-- Cinematics do not break save, input, or streaming.
-- All spoken or important narrative content has subtitle support.
+## 15 - Save / Checkpoint / Migration / Recovery
+**Governing:** `/function` (atomic, versioned, recoverable) + `/dataman` (schema/migration).
 
-## 13 - World Time, Weather, Audio, VFX, And Destruction
+Versioned snapshots, stable object IDs, async atomic saves, checkpoint scope, streamed-world restoration,
+corruption fallback, migration tests, multiple slots, a **cross-platform / cloud** save abstraction, and
+explicit autosave indicators.
 
-Integrate time-of-day, authored weather transitions, wetness/visibility effects, MetaSounds ambience, music states, vehicle/combat mix, Niagara budgets, decals, breakables, and Chaos destruction only where gameplay value justifies cost.
+Deliverables: save schema (stable IDs, versioning, migration, subsystem ownership); async/atomic writes,
+slots, autosave indicators, corruption fallback; checkpoint policy (cases, treatment, crisis, economy,
+reputation); cross-platform save shape + cloud abstraction; tests for migration, corruption, interrupted
+save, streamed restore, multi-slot, cross-platform load.
 
-Deliverables:
+Acceptance: the slice restores accurately; corrupt saves fail safely with visible recovery; saves are
+portable across platforms where feasible.
 
-1. Time/weather state with mission and district integration.
-2. Audio state system for ambience, music, combat, vehicle, pursuit, UI, and accessibility.
-3. VFX/decal/breakable budgets and scalability rules.
-4. Destruction hooks for authored gameplay moments only where performance allows.
-5. Profiling captures and debug toggles for each system.
+---
 
-Acceptance criteria:
+## 16 - Progression / Rewards / Challenge / Telemetry
+**Governing:** `/gamify` (ledger, anti-abuse) + `/function` (idempotent wiring).
 
-- Atmosphere improves gameplay readability rather than obscuring it.
-- Low settings preserve essential feedback.
+Progression, challenges, achievements, difficulty assists, **educational/mastery metrics**, and
+privacy-aware telemetry — with idempotent rewards and anti-farming.
 
-## 14 - UI, Map, Phone, HUD, And Accessibility
+Deliverables: an event-ledger progression system (idempotent reward events, source attribution, daily
+caps, cooldowns, audit log); challenges/achievements/case grading/assists; a telemetry schema (consent,
+PII minimization, offline buffering, debug viewer); an economy/mastery dashboard; tests for duplicate
+rewards, caps, challenge completion, difficulty effects, telemetry consent.
 
-Build CommonUI front end, HUD, interaction prompts, minimap/map, mission log, crew/garage screens, phone surface, settings, save/load, input glyphs, ultrawide and resolution scaling.
+Acceptance: rewards can't be farmed through retries or sync duplication; telemetry is consented and
+disableable without breaking gameplay; progression rewards mastery, never unsafe/wasteful play.
 
-Deliverables:
+---
 
-1. CommonUI shell with main menu, pause, settings, save/load, and profile surfaces.
-2. HUD for health, armor, ammo, heat, mission objectives, vehicle state, interactions, and pursuit feedback.
-3. Map/minimap, phone, mission log, crew, garage, and safehouse screens.
-4. Accessibility options for subtitles, color alternatives, aim/drive assists, reduced camera shake, hold/toggle, remapping, text size, and audio mix.
-5. Tests/manual checks for keyboard/mouse, gamepad, ultrawide, scaling, pause, and settings persistence.
+## 17 - Optional Co-op (a colleague joins)
+**Governing:** `/function` (authority, replication, no single-player destabilization).
 
-Acceptance criteria:
+Only after the single-player slice is stable: define server authority, session flow, replication/
+relevancy, prediction boundaries, join/leave, role ownership, disconnect recovery, anti-cheat posture,
+and network profiling for a **second player joining as a colleague**.
 
-- UI is readable and controllable across PC display modes.
-- Accessibility options persist and affect gameplay.
+Deliverables: a co-op feasibility ADR + scope boundary; session/authority/replication/ownership
+contracts; a narrow prototype (one supported role) if slice-stable; disconnect/reconnect + save
+compatibility; network profiling + anti-cheat notes.
 
-## 15 - Save, Checkpoints, Migration, And Recovery
+Acceptance: co-op does not destabilize single-player architecture; ownership decisions are explicit, not
+blind retrofits.
 
-Implement versioned campaign snapshots, stable object IDs, asynchronous saves, atomic writes, checkpoint scope, streamed-world restoration, corruption fallback, migration tests, multiple slots, cloud-provider abstraction, and explicit autosave indicators.
+---
 
-Deliverables:
+## 18 - Content Pipeline: Case Corpus + Art Assets + Validation
+**Governing:** `/dataman` (audit → brief → expand → validate; Jules delegation).
 
-1. Save schema with stable IDs, versioning, migration, and subsystem ownership.
-2. Async save/load, atomic writes, slot management, autosave indicators, and corruption fallback.
-3. Checkpoint policy for missions, pursuits, combat, vehicles, crew, economy, and district state.
-4. Cloud-provider abstraction without vendor lock-in.
-5. Tests for migration, corruption, interrupted save, streamed restore, and multiple slots.
+Grow the validated **clinical case corpus** and the original 3D art library (environments, patients,
+staff) with naming rules, provenance, reviewer metadata, and automated validation. Large data creation
+may be Jules-delegated **after a written brief**, validated locally before merge.
 
-Acceptance criteria:
+Deliverables: a content validation suite + asset QA checklist; expanded, validated case corpus
+(diversity, edge cases, difficulty distribution, provenance, reviewer tags — synthetic-illustrative,
+never presented as real); art-asset specs + validation; a delegation brief template.
 
-- Save/load restores the vertical slice accurately.
-- Corrupt saves fail safely with user-visible recovery.
+Acceptance: case + asset catalogs are unique-ID'd, reference-clean, provenance-tracked, distribution-
+balanced, and pass validation; no fake-as-real data; no secrets committed.
 
-## 16 - Progression, Rewards, Challenge, And Telemetry
+---
 
-Create progression and unlocks that broaden play rather than inflate numbers, mission grading, difficulty assists, challenge definitions, achievements, privacy-aware telemetry, economy dashboards, and anti-farming rules.
+## 19 - Performance, Scalability & Stability (All Platforms)
+**Governing:** `/function` (measured, per-tier, no leaks).
 
-Deliverables:
+Profile CPU/GPU/memory/IO/shaders/streaming/hitches/AI/audio/UI/save across **every platform tier
+including mobile**. Define scalability tiers, PSO strategy, automated soak routes, leak checks, crash
+recovery, and per-platform minimum/recommended-spec evidence.
 
-1. Progression ledger with idempotent reward events and source attribution.
-2. Unlocks, challenges, achievements, mission grading, assists, and difficulty settings.
-3. Telemetry schema with consent, PII minimization, offline buffering, and debug viewer.
-4. Economy dashboard for balance inspection.
-5. Tests for duplicate rewards, challenge completion, difficulty effects, and telemetry consent.
+Deliverables: Insights captures for slice journeys on desktop **and** mobile; finalized scalability tiers
++ per-platform settings; automated soak/streaming/crisis routes; PSO/shader strategy, hitch/memory
+reports, crash triage; a stability report with thresholds.
 
-Acceptance criteria:
+Acceptance: measured captures meet documented **per-tier** budgets (including a mobile tier); soak runs
+don't leak or hitch beyond accepted thresholds; performance is measured, not guessed.
 
-- Rewards cannot be farmed through retries or sync duplication.
-- Telemetry can be disabled without breaking gameplay.
+---
 
-## 17 - Optional Co-op Architecture
+## 20 - Platform Packaging, QA & Release (per-platform incl. console)
+**Governing:** `/dataman` (validation/QA matrices) + `/function` (reproducible builds).
 
-Only after the single-player slice is stable, define server authority, session flow, replication graph, relevancy, prediction boundaries, join/leave, mission ownership, vehicle seats, crew roles, disconnect recovery, anti-cheat posture, and network profiling.
+Validators, naming rules, functional test plans, a save-compatibility matrix, localization pipeline,
+BuildGraph/CI, signed packaging **per platform**, patch/chunk strategy, crash reporting, store/console
+compliance boundaries, release docs, and reproducible builds for every target.
 
-Deliverables:
+Deliverables: content-validation suite + asset QA checklist; a functional test plan (slice, VEX, saves,
+crises, UI, accessibility, per platform); localization pipeline + text audit; BuildGraph/CI packaging +
+signing notes per platform (console via licensed SDK/hardware); patch/chunk plan; crash-reporting hooks;
+reproducible packaged builds + a release README.
 
-1. Co-op feasibility ADR and scope boundary.
-2. Session, authority, replication, relevancy, prediction, and ownership contracts.
-3. Narrow prototype for one mission support role if approved by slice stability.
-4. Disconnect/reconnect and save compatibility plan.
-5. Network profiling and anti-cheat risk notes.
-
-Acceptance criteria:
-
-- Co-op does not destabilize single-player architecture.
-- Systems are not blindly retrofitted without ownership decisions.
-
-## 18 - VEX Protocol Mode
-
-Implement a separate module and game flow for educational clinical cost-duel cases.
-
-Deliverables:
-
-1. Independent VEX module, menu entry, save namespace, settings reuse, and disclaimer.
-2. Versioned case Data Assets with budgeted investigations, delayed results, diagnosis commitment, scoring, debrief references, reviewer metadata, and correction history.
-3. Deterministic event log for purchased tests, results, decisions, timing, safety penalties, and final scoring.
-4. UI for case briefing, budget, test shop, results timeline, final diagnosis, debrief, and replay.
-5. Tests for scoring, invalid cases, save isolation, content validation, and disclaimer visibility.
-
-Acceptance criteria:
-
-- VEX never mutates campaign state or fiction.
-- It is clearly educational and not clinical decision support.
-
-## 19 - Performance, Scalability, And Stability
-
-Profile CPU, GPU, memory, IO, shader compilation, streaming, hitches, AI, traffic, physics, audio, UI, save, and loading with representative captures. Create scalability tiers, PSO strategy, automated soak routes, leak checks, crash recovery, and minimum/recommended-spec evidence.
-
-Deliverables:
-
-1. Unreal Insights captures for vertical-slice journeys.
-2. Scalability tiers and PC settings recommendations.
-3. Automated soak tests and streaming/traffic/combat/pursuit routes.
-4. PSO/shader strategy, hitch reports, memory budget, and crash triage process.
-5. Stability report with known issues and acceptance thresholds.
-
-Acceptance criteria:
-
-- Performance data is measured, not guessed.
-- Representative minimum-spec targets are documented.
-
-## 20 - Content Pipeline, QA, Packaging, And Release
-
-Add validators, naming rules, maps/checklists, automated functional tests, save compatibility matrix, localization pipeline, BuildGraph/CI, signed Windows packaging, patch/chunk strategy, crash reporting, store integration boundaries, release documentation, and a reproducible Shipping build.
-
-Deliverables:
-
-1. Content validation suite and asset QA checklist.
-2. Functional test plan covering vertical slice, saves, missions, vehicles, police, VEX, UI, and settings.
-3. Localization pipeline and text audit.
-4. BuildGraph/CI packaging scripts, signing notes, patch/chunk plan, and crash reporting hooks.
-5. Reproducible packaged Shipping build and release README.
-
-Acceptance criteria:
-
-- A packaged Windows build can be produced from documented steps.
-- QA has a clear acceptance matrix and known-limitations report.
+Acceptance: reproducible packaged builds are produced from documented steps for each platform (console on
+licensed toolchain); QA has a clear per-platform acceptance matrix and known-limitations report.
